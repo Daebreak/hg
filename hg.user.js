@@ -4,8 +4,6 @@
 // @namespace   https://github.com/zmnmxlntr
 // @author      Virginia
 // @version     3.7.2
-// @downloadURL https://github.com/zmnmxlntr/hg/raw/master/hg.user.js
-// @updateURL   https://github.com/zmnmxlntr/hg/raw/master/hg.user.js
 // @iconURL     https://github.com/zmnmxlntr/hg/raw/master/icon.png
 // @include     /^(https?://)?boards\.4chan(nel)?\.org/.*/(res|thread)/.*$/
 // @include     /^(https?://)?(www\.)?brantsteele\.net/hungergames/(edit|personal)\.php$/
@@ -69,11 +67,209 @@
         const class_hgGender    = "hg-gender";
         const class_hgTributeNo = "hg-tributeNo";
 
+        const grills_array = [
+            '2b', '6', 'a', 'alien queen', 'ami mizuno', 'anal avengers daughter', 'angelica', 'angry zelda', 'arcoic', 'awoo girl', 'bismarck', 'blitz the bun', 'bonby', 'bronya zaychik', 'buddy',
+            'calcium', 'catra', 'charlotte', 'cherri', 'chiaki nanami', 'chinatsu', 'cindy', 'cute', 'devilica', 'devilman lady', 'dog tier jade', 'dog-tier jade', 'dorothy haze', 'dragon cunt', 'edra',
+            'edra glamcock', 'elf', 'elvina', 'emmy', 'ena', 'exusiai', 'fat chick', 'frank girl', 'frankie', 'frankie foster', 'frisk', 'goblin', 'gravel', 'guild girl', 'gwen', 'harley quinn', 'haruhi',
+            'hat kid', 'hatsune miku', 'hedenia', 'hestia', 'homeless girl', 'ida', 'ifrit', 'index', 'jennette mccurdy', 'jennette mccurdy ', 'jenny', 'kaokuma', 'kiana kaslana', 'kino', 'kizuna ai',
+            'klee', 'kurohime', 'kuroko', 'la', 'lain', 'lammy', 'lavie', 'liz', 'lona', 'loone', 'mabel', 'madotsuki', 'mae', 'mae borrowski', 'maga girl', 'mao mao', 'marie antoinette', 'marin',
+            'megumi', 'megumin', 'merry', 'miku', 'miranda cosgrove', 'motifa', 'nil sunna', 'nitori kawashiro', 'nobu', 'nutella girl', 'okku', 'platinum', 'princess zelda', 'psycho chan', 'psycho-chan',
+            'queen boo', 'rap(e)', 'rape snake', 'rebecca', 'reimu', 'relm', 'sailor mercury', 'sakuya', 'samsung sam', 'sayori', 'scully', 'senko san', 'serena', 'six', 'skeleton', 'sophia', 'suzumi',
+            'sword', 'teleporter', 'tsuyu', 'ty lee', 'unfortunate girl', 'unlucky girl', 'utharu', 'veruca salt', 'vex', 'warspite', 'wendy', 'x-23', 'zelda', 'marceline the vampire queen', 'maomao',
+            'loona', 'loonacity', 'hop', 'marceline the vampire queen', 'marcy', 'roxy glamcock', 'ranma', 'vanellope von schweetz', 'glamcock chica', 'teto', 'erkle', 'sylphi', 'noodle', 'mabel'
+        ];
+
+        //Lain start
+        let posts = [];
+
+        let tributes = [];
+
+        let spanMap = [];
+
+        let re = /(^(>>[0-9]+)(\s\(OP\))?)|((>>[0-9]+)(\s?\(You\))?(\s?\(OP\))?)|(\([FM]\))|(\(Female\))|(\(Male\))|\n/gi
+
+        let reapingSize = GM_getValue("options_lastSize", 24)
+
+        let rep = document.querySelector(".thread")
+        //Refreshes the HTML element, used by the thread observer. Probably there is no reason for this to exist.
+        let updateThreadPosts = () => document.getElementsByClassName("post reply")
+
+        let threadPosts = updateThreadPosts();
+        //Conversion of HTMLCollection to array is necessary here for easier time manipulating data.
+        let replyArray = Array.from(threadPosts);
+        //At the start of the script, grabs all posts in the thread, parse all important data from the posts and address it to variable posts.
+        setPosts(replyArray)
+        //Loops through posts array populated earlier and creates the forms.
+        let autoDraw = () => posts.forEach((post, index) => drawHandler(post, index))
+        //MutationObserver class let's us create an observer that watches any changes (specified by us) in the threads and then handle the change with a function callback.
+        const mutationObserver = new MutationObserver(() => {
+            threadPosts = updateThreadPosts()
+            let newReplyArray = Array.from(threadPosts)
+            let newPosts = newReplyArray.filter(reply => !replyArray.includes(reply))
+            let newPostsArray = [];
+
+            if (newPosts.length !== 0) {
+                newPosts.forEach(post => newPostsArray.push(handlePost(post)))
+                setPosts(newPosts)
+                newPostsArray.forEach((post, index) => drawHandler(post, replyArray.length + index))
+                replyArray = newReplyArray
+            }
+        })
+        //Observer will watch rep (all the thread class childs/nodes)
+        let observerStart = () => mutationObserver.observe(rep, { childList: true })
+
+        let observerDisconnect = () => mutationObserver.disconnect()
+
+        function detectGender(reply) {
+            let re = /(\([FM]\))|(\(Female\))|(\(Male\))/gi;
+            let fem = /(\([F]\))|(\(Female\))/gi;
+
+            if (reply.match(re)) {
+                return reply.match(fem) ? '0' : '1'
+            } else {
+                return '?'
+            }
+        }
+        //Recieves a single HTML post and returns an object with the tribute's necessary information from the post.
+        function handlePost(reply) {
+            let postObj = {
+                id: reply.id,
+                name: reply.getElementsByClassName("postMessage")[0].innerText.replace(re,'').trim(),
+                image: reply.getElementsByClassName("fileThumb").length ? reply.getElementsByClassName("fileThumb")[0].href : null,
+                gender: GM_getValue("options_detectGender", true) ? detectGender(reply.getElementsByClassName("postMessage")[0].innerText.toLowerCase()) : '?'
+            }
+            return postObj
+        }
+
+        function setPosts(replyArray) {
+            replyArray.forEach(reply => posts.push(handlePost(reply)))
+        };
+
+        //Why I waste my time with stuff like this.
+        function entryCheckBoxHandler (index, checkBoxValue) {
+            let setSpans = () => {
+                spanMap.forEach((span, num) => {
+                    hgForms[span].getElementsByTagName("span")[0].innerHTML = num + 1 <= reapingSize ? `<span style='color:white;'> (${num + 1})</span>` : `<span style='color:grey;'> (${num + 1})</span>`
+                    hgForms[span].getElementsByTagName("span")[0].title = `Tribute #${num + 1}`})
+            }
+
+            let auxSearch = () => {
+                let min;
+                for (let i = 0; i != spanMap.length; i++){
+                    if (spanMap[i] < index - 1) {
+                        min = spanMap[i];
+                    } else {
+                        break
+                    }
+                }
+                return min
+            }
+
+            const hgForms = document.getElementsByClassName("hg-form");
+            let pos = spanMap.length === 0 ? 0 : auxSearch()
+
+            if (checkBoxValue) {
+                pos = spanMap.findIndex(i => i == pos)
+                spanMap.splice(pos + 1, 0, index - 1);
+                setSpans();
+            } else {
+                pos = spanMap.findIndex(i => i == index - 1)
+                spanMap.splice(pos, 1)
+                hgForms[index - 1].getElementsByTagName("span")[0].innerHTML = '';
+                hgForms[index - 1].getElementsByTagName("span")[0].title = '';
+                setSpans();
+            }
+        }
+
+        function drawHandler (post, index) {
+            const optSkipEmpty     = GM_getValue("options_skipEmpty", true);
+            const optDetectGender  = GM_getValue("options_detectGender", true);
+            const optUnlimitLength = GM_getValue("options_unlimitLength", true);
+
+            // Checkbox for entry
+            const hgEntry_checkbox = document.createElement('input');
+            hgEntry_checkbox.type = "checkbox";
+            hgEntry_checkbox.className = class_hgCheckbox;
+            hgEntry_checkbox.title = `Image #${index + 1}`;
+            hgEntry_checkbox.style = "display:inline!important;";
+            hgEntry_checkbox.onchange = () => entryCheckBoxHandler(parseInt(hgEntry_checkbox.title.slice(7)), hgEntry_checkbox.checked);
+            optSkipEmpty && post.name === "" || post.image === null ? hgEntry_checkbox.checked = false : hgEntry_checkbox.checked = true
+
+            const hgNumber_span = document.createElement('span');
+            hgNumber_span.className = class_hgTributeNo;
+            if (hgEntry_checkbox.checked === true) {
+                hgNumber_span.innerHTML = spanMap.length + 1 <= reapingSize ? `<span style='color:white;'> (${spanMap.length + 1})</span>` : `<span style='color:grey;'> (${spanMap.length + 1})</span>`;
+                hgNumber_span.title = `Tribute #${spanMap.length + 1}`;
+                spanMap.push(index)
+            }
+
+            // Text input field for tribute name
+            const hgName_text = document.createElement('input');
+            hgName_text.type = "text";
+            hgName_text.size = 36;
+            hgName_text.className = class_hgField;
+            hgName_text.title = "Tribute name";
+            hgName_text.value = post.name;
+            optUnlimitLength ? hgName_text.maxLength = 2000 : hgName_text.maxLength = 26
+
+            // Radio buttons for gender
+            const hgMale_radio = document.createElement('input');
+            hgMale_radio.type = "radio";
+            hgMale_radio.name = class_hgGender;
+            hgMale_radio.className = class_hgGender;
+            hgMale_radio.value = "M";
+            hgMale_radio.title = "Male";
+            const hgFemale_radio = document.createElement('input');
+            hgFemale_radio.type = "radio";
+            hgFemale_radio.name = class_hgGender;
+            hgFemale_radio.className = class_hgGender;
+            hgFemale_radio.value = "F";
+            hgFemale_radio.title = "Female";
+            if (optDetectGender) {
+                if (grills_array.some(grill => grill === post.name.toLowerCase())) {
+                    hgFemale_radio.checked = true
+                }
+            }
+            // Tribute form that contains previous elements
+            const hgForm_form = document.createElement('form');
+            hgForm_form.className = class_hgForm;
+            //hgForm_form.setAttribute("postNumber", postNumber); // ToDO: Use this somewhere to make things more efficient? Or just access this info through parent.id
+            hgForm_form.appendChild(hgEntry_checkbox);
+            hgForm_form.appendChild(hgName_text);
+            hgForm_form.appendChild(hgMale_radio);
+            hgForm_form.appendChild(hgFemale_radio);
+            hgForm_form.appendChild(hgNumber_span);
+
+            threadPosts[index].prepend(hgForm_form);
+        }
+
+        function autoSave () {
+            let form = document.getElementsByClassName(class_hgForm)
+            tributes = []
+            spanMap.forEach(tribute => {
+                let genderRadio = form[tribute].getElementsByClassName(class_hgGender)
+                if (posts[tribute].name !== form[tribute].getElementsByClassName(class_hgField)[0].value || genderRadio[0].checked || genderRadio[1].checked) {
+                    let modifiedTribute = posts.slice(tribute, posts.length === tribute ? Infinity : tribute + 1);
+                    if (genderRadio[0].checked) {
+                        modifiedTribute[0].gender = '0'
+                    } else if (genderRadio[1].checked) {
+                        modifiedTribute[0].gender = '1'
+                    }
+                    modifiedTribute[0].name = form[tribute].getElementsByClassName(class_hgField)[0].value
+                    tributes.push(modifiedTribute[0])
+                } else {
+                    tributes.push(posts[tribute])
+                }
+            })
+            GM_setValue("tributes", tributes);
+            console.log(tributes)
+        }
+        //Lain end
+
         // ToDO: Pretty sure this can just be a global assignment instead of a function, the value will change if the element's value does. If not, we can use onChange to update the value automatically.
         function hgSize() {
             hgReapingSize = document.getElementById("hgTribsNo").value;
         }
-
         // Depending on whether "tributeCounter" is enabled, either number/renumber tributes or remove any currently rendered numbering
         function hgNumberTributes() {
             hgSize();
@@ -238,11 +434,10 @@
             hgNumberTributes();
 
             console.log(new Date().getTime() - start);
-        }
+         }
 
         function hgSave() {
             const start = new Date().getTime();
-
             hgSize();
 
             let tributeForms = document.getElementsByClassName(class_hgForm);
@@ -282,6 +477,7 @@
             GM_setValue("imgsStr", imgsStr.slice(0, -1));
 
             console.log(new Date().getTime() - start);
+            console.log(nomsStr);
         }
 
         //================================================================================================================//
@@ -294,7 +490,7 @@
             switch(key.keyCode) {
                 case 112:
                 case 115:
-                    hgDraw();
+                    GM_getValue("options_testBuild", false) ? autoDraw() : hgDraw()
                     break;
                 case 113:
                     hgHide();
@@ -332,17 +528,37 @@
         // Deselect all selected tributes
         function hgDeselect() {
             if(document.getElementsByClassName(class_hgForm).length === 0) {
-                hgDraw();
-                hgHide();
+                if (GM_getValue("options_testBuild", false)) {
+                    autoDraw();
+                    hgHide();
+                } else {
+                    hgDraw();
+                    hgHide();
+                }
                 window.scrollTo(0, document.body.scrollHeight);
             }
-
-            const imgs = document.getElementsByClassName(class_hgCheckbox);
-            for(let i = 0; i < imgs.length; i++) {
-                imgs[i].checked = false;
+            //Lain start
+            let deselectAll = () => {
+                const length = spanMap.length - 1
+                for(let i = length; i >= 0; i--){
+                    entryCheckBoxHandler(spanMap[i] + 1, false)
+                }
             }
-
-            hgNumberTributes();
+            //Lain end
+            const imgs = document.getElementsByClassName(class_hgCheckbox);
+            //Lain start (if only, first for is original)
+            if (!GM_getValue("options_testBuild", false)) {
+                for(let i = 0; i < imgs.length; i++) {
+                    imgs[i].checked = false;
+                }
+            } else {
+                deselectAll();
+                for(let i = 0; i < imgs.length; i++) {
+                    imgs[i].checked = false;
+                }
+            }
+            if (!GM_getValue("options_testBuild", false)) hgNumberTributes()
+            //Lain end
         }
 
         // Show or hide options panel
@@ -368,6 +584,7 @@
             document.getElementById("hgOptions-detectGender").checked = GM_getValue("options_detectGender", true);
             document.getElementById("hgOptions-unlimitLength").checked = GM_getValue("options_unlimitLength", true);
             document.getElementById("hgOptions-tributeCounter").checked = GM_getValue("options_tributeCounter", true);
+            document.getElementById("hgOptions-testBuild").checked = GM_getValue("options_testBuild", false);
         }
 
         //================================================================================================================//
@@ -433,17 +650,7 @@
         //== Tributes known to be grills =================================================================================//
         //================================================================================================================//
 
-        const grills_dict = [], grills_array = [
-            '2b', '6', 'a', 'alien queen', 'ami mizuno', 'anal avengers daughter', 'angelica', 'angry zelda', 'arcoic', 'awoo girl', 'bismarck', 'blitz the bun', 'bonby', 'bronya zaychik', 'buddy',
-            'calcium', 'catra', 'charlotte', 'cherri', 'chiaki nanami', 'chinatsu', 'cindy', 'cute', 'devilica', 'devilman lady', 'dog tier jade', 'dog-tier jade', 'dorothy haze', 'dragon cunt', 'edra',
-            'edra glamcock', 'elf', 'elvina', 'emmy', 'ena', 'exusiai', 'fat chick', 'frank girl', 'frankie', 'frankie foster', 'frisk', 'goblin', 'gravel', 'guild girl', 'gwen', 'harley quinn', 'haruhi',
-            'hat kid', 'hatsune miku', 'hedenia', 'hestia', 'homeless girl', 'ida', 'ifrit', 'index', 'jennette mccurdy', 'jennette mccurdy ', 'jenny', 'kaokuma', 'kiana kaslana', 'kino', 'kizuna ai',
-            'klee', 'kurohime', 'kuroko', 'la', 'lain', 'lammy', 'lavie', 'liz', 'lona', 'loone', 'mabel', 'madotsuki', 'mae', 'mae borrowski', 'maga girl', 'mao mao', 'marie antoinette', 'marin',
-            'megumi', 'megumin', 'merry', 'miku', 'miranda cosgrove', 'motifa', 'nil sunna', 'nitori kawashiro', 'nobu', 'nutella girl', 'okku', 'platinum', 'princess zelda', 'psycho chan', 'psycho-chan',
-            'queen boo', 'rap(e)', 'rape snake', 'rebecca', 'reimu', 'relm', 'sailor mercury', 'sakuya', 'samsung sam', 'sayori', 'scully', 'senko san', 'serena', 'six', 'skeleton', 'sophia', 'suzumi',
-            'sword', 'teleporter', 'tsuyu', 'ty lee', 'unfortunate girl', 'unlucky girl', 'utharu', 'veruca salt', 'vex', 'warspite', 'wendy', 'x-23', 'zelda', 'marceline the vampire queen', 'maomao',
-            'loona', 'loonacity', 'hop', 'marceline the vampire queen', 'marcy', 'roxy glamcock', 'ranma', 'vanellope von schweetz', 'glamcock chica', 'teto', 'erkle', 'sylphi'
-        ];
+        const grills_dict = []
         for(let i = 0; i < grills_array.length; i++) {
             grills_dict[grills_array[i]] = '';
         }
@@ -516,6 +723,14 @@
                 function() { GM_setValue("options_detectGender", document.getElementById("hgOptions-detectGender").checked); }
             )
         );
+        hgSettings_div.appendChild(
+            hgCreateElement_Checkbox(
+                "hgOptions-testBuild",
+                "For testing new features without conflicts with old build",
+                "Test build<br>",
+                function() { GM_setValue("options_testBuild", document.getElementById("hgOptions-testBuild").checked); }
+            )
+        );
 
         // ToDO: Can we instead pass to the function the element as we already have it above? Doubt it, but worth looking into.
         const hgUpcoming_btn = hgCreateElement_Button("Upcoming", "Upcoming features and changes", function() { hgHidePanel("hgOptions-panel"); hgHidePanel("hgChangelog-panel"); hgTogglePanel("hgUpcoming-panel"); });
@@ -536,7 +751,7 @@
         const hgCtrls_div = hgCreateElement_Div("hungergames");
         hgCtrls_div.appendChild(hgCreateElement_Button("Draw", "Draw the entry forms", function() { hgDraw(); window.scrollTo(0, document.body.scrollHeight); }));
         hgCtrls_div.appendChild(hgCreateElement_Button("Hide", "Hide the entry forms", hgHide));
-        hgCtrls_div.appendChild(hgCreateElement_Button("Save", "Save the entries", hgSave));
+        hgCtrls_div.appendChild(hgCreateElement_Button("Save", "Save the entries", GM_getValue("options_testBuild", true) ? autoSave : hgSave));
         hgCtrls_div.appendChild(hgCreateElement_Button("Deselect All", "Deselect all tribute entry form checkboxes", function() { if(confirm("Deselect all tribute entry checkboxes?")) hgDeselect(); }));
         hgCtrls_div.appendChild(hgTributes_select);
         hgCtrls_div.appendChild(hgCreateElement_Button("Reaping", "Open the reaping page on Brantsteele's website in a new tab", function() { window.open("https://brantsteele.net/hungergames/reaping.php"); }));
@@ -572,10 +787,29 @@
             }
         }
 
+        function generateInputs(inputs) {
+            let arrInputs = [];
+            for (let i = 2; i < inputs.length - 8; i += 4) {
+                var newInput = {
+                    cusTribute: document.getElementsByName(`${inputs[i].name}`),
+                    cusTributeimg: document.getElementsByName(`${inputs[i + 1].name}`),
+                    cusTributenickname: document.getElementsByName(`${inputs[i + 2].name}`),
+                    cusTributeimgBW: document.getElementsByName(`${inputs[i + 3].name}`),
+                    cusTributegender: document.getElementsByName(`${inputs[i].name}gender`)
+                }
+                 arrInputs.push(newInput)
+            }
+            return arrInputs;
+        };
+
         function hgLoad(rolling=false) {
             const hgReapingSize = GM_getValue("reapingSize", 24);
             const optGreyDead = GM_getValue("options_greyDead", true);
-
+            //Lain start
+            const tributes = GM_getValue("tributes", "Hi");
+            console.log(tributes);
+            console.log("trib names: " + tributes[0].name);
+            //Lain end
             const noms = GM_getValue("nomsStr").split('|');
             const gens = GM_getValue("gensStr").split('|');
             const imgs = GM_getValue("imgsStr").split('|');
@@ -583,6 +817,21 @@
             const capacity = (document.getElementsByTagName("select").length - 2) / 3;
             const genders = document.getElementsByTagName("select");
             const inputs = document.getElementsByTagName("input");
+
+
+            //Lain start
+            let inpObj = generateInputs(inputs)
+            console.log("inputs generated", inpObj)
+            let inp = Array.from(inputs)
+
+            inpObj.forEach((input,index) => {
+                           input.cusTribute[0].value = tributes[index].name
+                           input.cusTributeimg[0].value = tributes[index].image
+                           input.cusTributenickname[0].value = tributes[index].id
+                           input.cusTributeimgBW[0].value = tributes[index].image
+                           input.cusTributegender[0].value = tributes[index].gender
+            });
+            //Lain end
 
             let i, j;
 
