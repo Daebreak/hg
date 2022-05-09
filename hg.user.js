@@ -145,14 +145,14 @@
             replyArray.forEach(reply => posts.push(handlePost(reply)))
         };
 
-        //Why I waste my time with stuff like this.
+        //Why I waste my time with stuff like this. toDO: add a check in case a span was already created, and either delete previous span or prevent of a new one to be created.
         function entryCheckBoxHandler (index, checkBoxValue) {
             let setSpans = () => {
                 spanMap.forEach((span, num) => {
                     hgForms[span].getElementsByTagName("span")[0].innerHTML = num + 1 <= reapingSize ? `<span style='color:white;'> (${num + 1})</span>` : `<span style='color:grey;'> (${num + 1})</span>`
                     hgForms[span].getElementsByTagName("span")[0].title = `Tribute #${num + 1}`})
             }
-
+            //Finds the highest index, that is smaller than the index to be inseted/removed, present in the span map.
             let auxSearch = () => {
                 let min;
                 for (let i = 0; i != spanMap.length; i++){
@@ -166,14 +166,16 @@
             }
 
             const hgForms = document.getElementsByClassName("hg-form");
-            let pos = spanMap.length === 0 ? 0 : auxSearch()
+            let pos = spanMap.length ? 0 : auxSearch()
 
             if (checkBoxValue) {
-                pos = spanMap.findIndex(i => i == pos)
+                //Probably totally unnecessary to findIndex here when the auxSearch function can return the index of spanMap and not the array's element, will test later.
+                pos = spanMap.findIndex(i => i === pos)
                 spanMap.splice(pos + 1, 0, index - 1);
                 setSpans();
             } else {
-                pos = spanMap.findIndex(i => i == index - 1)
+                //Also might not be necessary.
+                pos = spanMap.findIndex(i => i === index - 1)
                 spanMap.splice(pos, 1)
                 hgForms[index - 1].getElementsByTagName("span")[0].innerHTML = '';
                 hgForms[index - 1].getElementsByTagName("span")[0].title = '';
@@ -786,7 +788,7 @@
                 inputs[i + 2].removeAttribute("maxLength");
             }
         }
-
+        //Lain start
         function generateInputs(inputs) {
             let arrInputs = [];
             for (let i = 2; i < inputs.length - 8; i += 4) {
@@ -802,14 +804,28 @@
             return arrInputs;
         };
 
+        function setTributes() {
+            const inputs = document.getElementsByTagName("input");
+            const tributes = GM_getValue("tributes", "Hi");
+
+            console.log(tributes);
+            console.log("trib names: " + tributes[0].name);
+
+            let inpObj = generateInputs(inputs)
+            console.log("inputs generated", inpObj)
+
+            inpObj.forEach((input,index) => {
+                input.cusTribute[0].value = tributes[index].name
+                input.cusTributeimg[0].value = tributes[index].image
+                input.cusTributenickname[0].value = tributes[index].name
+                input.cusTributeimgBW[0].value = true ? 'BW' : tributes[index].image
+                input.cusTributegender[0].value = tributes[index].gender
+            });
+        }
+        //Lain end
         function hgLoad(rolling=false) {
             const hgReapingSize = GM_getValue("reapingSize", 24);
             const optGreyDead = GM_getValue("options_greyDead", true);
-            //Lain start
-            const tributes = GM_getValue("tributes", "Hi");
-            console.log(tributes);
-            console.log("trib names: " + tributes[0].name);
-            //Lain end
             const noms = GM_getValue("nomsStr").split('|');
             const gens = GM_getValue("gensStr").split('|');
             const imgs = GM_getValue("imgsStr").split('|');
@@ -817,21 +833,6 @@
             const capacity = (document.getElementsByTagName("select").length - 2) / 3;
             const genders = document.getElementsByTagName("select");
             const inputs = document.getElementsByTagName("input");
-
-
-            //Lain start
-            let inpObj = generateInputs(inputs)
-            console.log("inputs generated", inpObj)
-            let inp = Array.from(inputs)
-
-            inpObj.forEach((input,index) => {
-                           input.cusTribute[0].value = tributes[index].name
-                           input.cusTributeimg[0].value = tributes[index].image
-                           input.cusTributenickname[0].value = tributes[index].id
-                           input.cusTributeimgBW[0].value = tributes[index].image
-                           input.cusTributegender[0].value = tributes[index].gender
-            });
-            //Lain end
 
             let i, j;
 
@@ -896,7 +897,7 @@
 
         // Button to load tribute data into simulator
         const hgLoad_div = hgCreateElement_Div("hgLoad", "position:absolute;");
-        hgLoad_div.append(hgCreateElement_Button("Load", "Load saved tributes", hgLoad));
+        hgLoad_div.append(hgCreateElement_Button("Load", "Load saved tributes", GM_getValue("options_testBuild", false) ? setTributes : hgLoad));
         hgLoad_div.append(hgCreateElement_Button("Rolling Load", "Load saved tributes over and over again until we're full up", function() { hgLoad(true); }));
         document.getElementsByClassName("personalHG")[0].prepend(hgLoad_div);
     }
