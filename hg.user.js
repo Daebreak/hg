@@ -86,7 +86,7 @@
 
         let spanMap = [];
 
-        let re = /(^(>>[0-9]+)(\s\(OP\))?)|((>>[0-9]+)(\s?\(You\))?(\s?\(OP\))?)|(\([FM]\))|(\(Female\))|(\(Male\))|\n/gi
+        let re = /(^(>>[0-9]+)(\s\(OP\))?)|((>>[0-9]+)(\s?\(You\))?(\s?\(OP\))?)|(\([FM]\))|(\(Female\))|(\(Male\))|((>[a-z].+)?)/gi
 
         let reapingSize = GM_getValue("options_lastSize", 24)
 
@@ -96,15 +96,22 @@
 
         let threadPosts = updateThreadPosts();
         //Conversion of HTMLCollection to array is necessary here for easier time manipulating data.
-        let replyArray = Array.from(threadPosts);
+        let replyArray = Array.from(updateThreadPosts());
         //At the start of the script, grabs all posts in the thread, parse all important data from the posts and address it to variable posts.
         setPosts(replyArray)
         //Loops through posts array populated earlier and creates the forms.
         let autoDraw = () => posts.forEach((post, index) => drawHandler(post, index))
         //MutationObserver class let's us create an observer that watches any changes (specified by us) in the threads and then handle the change with a function callback.
         const mutationObserver = new MutationObserver(() => {
-            threadPosts = updateThreadPosts()
-            let newReplyArray = Array.from(threadPosts)
+            updatePosts();
+        })
+        //Observer will watch rep (all the thread class childs/nodes)
+        let observerStart = () => mutationObserver.observe(rep, { childList: true })
+
+        let observerDisconnect = () => mutationObserver.disconnect()
+
+        function updatePosts() {
+            let newReplyArray = Array.from(updateThreadPosts())
             let newPosts = newReplyArray.filter(reply => !replyArray.includes(reply))
             let newPostsArray = [];
 
@@ -114,11 +121,7 @@
                 newPostsArray.forEach((post, index) => drawHandler(post, replyArray.length + index))
                 replyArray = newReplyArray
             }
-        })
-        //Observer will watch rep (all the thread class childs/nodes)
-        let observerStart = () => mutationObserver.observe(rep, { childList: true })
-
-        let observerDisconnect = () => mutationObserver.disconnect()
+        }
 
         function detectGender(reply) {
             let re = /(\([FM]\))|(\(Female\))|(\(Male\))/gi;
@@ -132,11 +135,27 @@
         }
         //Recieves a single HTML post and returns an object with the tribute's necessary information from the post.
         function handlePost(reply) {
+            let imageFilter = () => {
+                if (reply.getElementsByClassName("fileThumb").length === 0) {
+                    return null
+                }
+                if (reply.getElementsByClassName("fileThumb")[0].href.match('.webm')) {
+                    return reply.getElementsByClassName("fileThumb")[0].href.replace('.webm', 's.jpg')
+                } else {
+                    return reply.getElementsByClassName("fileThumb")[0].href
+                }
+
+            }
+
+            let innerText = reply.getElementsByClassName("postMessage")[0].innerText.replace(re,'').split('\n').find(r => r !== '')
+            let imageLink = imageFilter()
+            let gender = reply.getElementsByClassName("postMessage")[0].innerText.toLowerCase()
+
             let postObj = {
                 id: reply.id,
-                name: reply.getElementsByClassName("postMessage")[0].innerText.replace(re,'').trim(),
-                image: reply.getElementsByClassName("fileThumb").length ? reply.getElementsByClassName("fileThumb")[0].href : null,
-                gender: GM_getValue("options_detectGender", true) ? detectGender(reply.getElementsByClassName("postMessage")[0].innerText.toLowerCase()) : '?'
+                name: innerText ?? '',
+                image: imageLink,
+                gender: GM_getValue("options_detectGender", true) ? detectGender(gender) : '?'
             }
             return postObj
         }
@@ -145,43 +164,39 @@
             replyArray.forEach(reply => posts.push(handlePost(reply)))
         };
 
-        //Why I waste my time with stuff like this. toDO: add a check in case a span was already created, and either delete previous span or prevent of a new one to be created.
-        function entryCheckBoxHandler (index, checkBoxValue) {
-            console.log(spanMap)
-            console.log(index)
-            let setSpans = () => {
-                spanMap.forEach((span, num) => {
-                    hgForms[span].getElementsByTagName("span")[0].innerHTML = num + 1 <= reapingSize ? `<span style='color:white;'> (${num + 1})</span>` : `<span style='color:grey;'> (${num + 1})</span>`
-                    hgForms[span].getElementsByTagName("span")[0].title = `Tribute #${num + 1}`})
-            }
-            //Finds the highest index, that is smaller than the index to be inseted/removed, present in the span map.
+        function setSpans (hgForms) {
+            spanMap.forEach((span, num) => {
+                hgForms[span].getElementsByTagName("span")[0].innerHTML = num + 1 <= reapingSize ? `<span style='color:white;'> (${num + 1})</span>` : `<span style='color:grey;'> (${num + 1})</span>`
+                hgForms[span].getElementsByTagName("span")[0].title = `Tribute #${num + 1}`})
+        }
+
+        //Why I waste my time with stuff like this. toDO: add a check in case a span was already created, and either delete previous span or prevent a new one to be created.
+        //This function will need to be optimized if I use it to deselect everything too.
+        function entryCheckBoxHandler (index, checkBoxValue, useFunction) {
+            //Finds the highest index, that is smaller than the index to be inseted/removed, present in the span map. Can also use findIndex instead of this function.
             let auxSearch = () => {
                 let min;
                 for (let i = 0; i < spanMap.length; i++) {
                     if (spanMap[i] < index - 1) {
-                        min = spanMap[i];
+                        min = i;
                     } else {
                         break
                     }
                 }
                 return min
             }
-
             const hgForms = document.getElementsByClassName("hg-form");
             let pos = spanMap.length === 0 ? 0 : auxSearch()
 
             if (checkBoxValue) {
-                //Probably totally unnecessary to findIndex here when the auxSearch function can return the index of spanMap and not the array's element, will test later.
-                pos = spanMap.findIndex(i => i === pos)
                 spanMap.splice(pos + 1, 0, index - 1);
-                setSpans();
             } else {
-                //Also might not be necessary.
-                pos = spanMap.findIndex(i => i === index - 1)
-                spanMap.splice(pos, 1)
+                spanMap.splice(pos + 1, 1)
                 hgForms[index - 1].getElementsByTagName("span")[0].innerHTML = '';
                 hgForms[index - 1].getElementsByTagName("span")[0].title = '';
-                setSpans();
+            }
+            if (useFunction) {
+                setSpans(hgForms);
             }
         }
 
@@ -196,7 +211,7 @@
             hgEntry_checkbox.className = class_hgCheckbox;
             hgEntry_checkbox.title = `Image #${index + 1}`;
             hgEntry_checkbox.style = "display:inline!important;";
-            hgEntry_checkbox.onchange = () => entryCheckBoxHandler(parseInt(hgEntry_checkbox.title.slice(7)), hgEntry_checkbox.checked);
+            hgEntry_checkbox.onclick = () => entryCheckBoxHandler(parseInt(hgEntry_checkbox.title.slice(7)), hgEntry_checkbox.checked, true);
             optSkipEmpty && post.name === "" || post.image === null ? hgEntry_checkbox.checked = false : hgEntry_checkbox.checked = true
 
             const hgNumber_span = document.createElement('span');
@@ -487,14 +502,34 @@
         //================================================================================================================//
         //== Keybind Functionalities =====================================================================================//
         //================================================================================================================//
-
+        let firstDraw = true
+        let observerOn = false
         document.onkeydown = function(key) {
             key = key || window.event;
 
             switch(key.keyCode) {
                 case 112:
+                    if (observerOn) {
+                        console.log('I am here')
+                        observerDisconnect()
+                        observerOn = false
+                    } else {
+                        console.log('Now I am here')
+                        observerStart()
+                        observerOn = true
+                    }
+                    break;
                 case 115:
-                    GM_getValue("options_testBuild", false) ? autoDraw() : hgDraw()
+                    if (GM_getValue("options_testBuild", false)) {
+                        if (firstDraw) {
+                            autoDraw()
+                            firstDraw = false
+                        } else {
+                            updatePosts()
+                        }
+                    } else {
+                        hgDraw()
+                    }
                     break;
                 case 113:
                     hgHide();
@@ -543,10 +578,17 @@
             }
             //Lain start
             let deselectAll = () => {
+                const start = new Date().getTime();
                 const length = spanMap.length - 1
+
                 for(let i = length; i >= 0; i--){
-                    entryCheckBoxHandler(spanMap[i] + 1, false)
+                    entryCheckBoxHandler(spanMap[i] + 1, false, false)
                 }
+                for(let i = 0; i < imgs.length; i++) {
+                    imgs[i].checked = false;
+                }
+
+                console.log(new Date().getTime() - start);
             }
             //Lain end
             const imgs = document.getElementsByClassName(class_hgCheckbox);
@@ -557,9 +599,6 @@
                 }
             } else {
                 deselectAll();
-                for(let i = 0; i < imgs.length; i++) {
-                    imgs[i].checked = false;
-                }
             }
             if (!GM_getValue("options_testBuild", false)) hgNumberTributes()
             //Lain end
@@ -794,21 +833,19 @@
         function setTributes() {
             const inputs = document.getElementsByTagName("input");
             const tributes = GM_getValue("tributes");
-
-            console.log(tributes);
-            console.log("trib names: " + tributes[0].name);
-
-
+            const numTributes = tributes.length
             let inpObj = generateInputs(inputs)
-            console.log("inputs generated", inpObj)
+            const hgSize = inpObj.length
+            let i = 0
 
-            inpObj.forEach((input,index) => {
-                input.cusTribute[0].value = tributes[index].name
-                input.cusTributeimg[0].value = tributes[index].image
-                input.cusTributenickname[0].value = tributes[index].name
-                input.cusTributeimgBW[0].value = true ? 'BW' : tributes[index].image
-                input.cusTributegender[0].value = tributes[index].gender
-            });
+            while (i < numTributes && i < hgSize ) {
+                inpObj[i].cusTribute[0].value = tributes[i].name
+                inpObj[i].cusTributeimg[0].value = tributes[i].image
+                inpObj[i].cusTributenickname[0].value = tributes[i].name
+                inpObj[i].cusTributeimgBW[0].value = true ? 'BW' : tributes[i].image
+                inpObj[i].cusTributegender[0].value = tributes[i].gender
+                i++;
+            }
         }
 
         function hgUnlimitLengths() {
