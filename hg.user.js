@@ -147,6 +147,8 @@
 
         //Why I waste my time with stuff like this. toDO: add a check in case a span was already created, and either delete previous span or prevent of a new one to be created.
         function entryCheckBoxHandler (index, checkBoxValue) {
+            console.log(spanMap)
+            console.log(index)
             let setSpans = () => {
                 spanMap.forEach((span, num) => {
                     hgForms[span].getElementsByTagName("span")[0].innerHTML = num + 1 <= reapingSize ? `<span style='color:white;'> (${num + 1})</span>` : `<span style='color:grey;'> (${num + 1})</span>`
@@ -155,7 +157,7 @@
             //Finds the highest index, that is smaller than the index to be inseted/removed, present in the span map.
             let auxSearch = () => {
                 let min;
-                for (let i = 0; i != spanMap.length; i++){
+                for (let i = 0; i < spanMap.length; i++) {
                     if (spanMap[i] < index - 1) {
                         min = spanMap[i];
                     } else {
@@ -166,7 +168,7 @@
             }
 
             const hgForms = document.getElementsByClassName("hg-form");
-            let pos = spanMap.length ? 0 : auxSearch()
+            let pos = spanMap.length === 0 ? 0 : auxSearch()
 
             if (checkBoxValue) {
                 //Probably totally unnecessary to findIndex here when the auxSearch function can return the index of spanMap and not the array's element, will test later.
@@ -253,9 +255,9 @@
                 if (posts[tribute].name !== form[tribute].getElementsByClassName(class_hgField)[0].value || genderRadio[0].checked || genderRadio[1].checked) {
                     let modifiedTribute = posts.slice(tribute, posts.length === tribute ? Infinity : tribute + 1);
                     if (genderRadio[0].checked) {
-                        modifiedTribute[0].gender = '0'
-                    } else if (genderRadio[1].checked) {
                         modifiedTribute[0].gender = '1'
+                    } else if (genderRadio[1].checked) {
+                        modifiedTribute[0].gender = '0'
                     }
                     modifiedTribute[0].name = form[tribute].getElementsByClassName(class_hgField)[0].value
                     tributes.push(modifiedTribute[0])
@@ -774,6 +776,41 @@
             return true;
         };
 
+        function generateInputs(inputs) {
+            let arrInputs = [];
+            for (let i = 2; i < inputs.length - 8; i += 4) {
+                var newInput = {
+                    cusTribute: document.getElementsByName(`${inputs[i].name}`),
+                    cusTributeimg: document.getElementsByName(`${inputs[i + 1].name}`),
+                    cusTributenickname: document.getElementsByName(`${inputs[i + 2].name}`),
+                    cusTributeimgBW: document.getElementsByName(`${inputs[i + 3].name}`),
+                    cusTributegender: document.getElementsByName(`${inputs[i].name}gender`)
+                }
+                arrInputs.push(newInput)
+            }
+            return arrInputs;
+        };
+
+        function setTributes() {
+            const inputs = document.getElementsByTagName("input");
+            const tributes = GM_getValue("tributes");
+
+            console.log(tributes);
+            console.log("trib names: " + tributes[0].name);
+
+
+            let inpObj = generateInputs(inputs)
+            console.log("inputs generated", inpObj)
+
+            inpObj.forEach((input,index) => {
+                input.cusTribute[0].value = tributes[index].name
+                input.cusTributeimg[0].value = tributes[index].image
+                input.cusTributenickname[0].value = tributes[index].name
+                input.cusTributeimgBW[0].value = true ? 'BW' : tributes[index].image
+                input.cusTributegender[0].value = tributes[index].gender
+            });
+        }
+
         function hgUnlimitLengths() {
             // ToDO: Instead of simply returning when option is false, reinstate maxLength attribute
             if(GM_getValue("options_unlimitLength", false) === true) return;
@@ -788,41 +825,7 @@
                 inputs[i + 2].removeAttribute("maxLength");
             }
         }
-        //Lain start
-        function generateInputs(inputs) {
-            let arrInputs = [];
-            for (let i = 2; i < inputs.length - 8; i += 4) {
-                var newInput = {
-                    cusTribute: document.getElementsByName(`${inputs[i].name}`),
-                    cusTributeimg: document.getElementsByName(`${inputs[i + 1].name}`),
-                    cusTributenickname: document.getElementsByName(`${inputs[i + 2].name}`),
-                    cusTributeimgBW: document.getElementsByName(`${inputs[i + 3].name}`),
-                    cusTributegender: document.getElementsByName(`${inputs[i].name}gender`)
-                }
-                 arrInputs.push(newInput)
-            }
-            return arrInputs;
-        };
 
-        function setTributes() {
-            const inputs = document.getElementsByTagName("input");
-            const tributes = GM_getValue("tributes", "Hi");
-
-            console.log(tributes);
-            console.log("trib names: " + tributes[0].name);
-
-            let inpObj = generateInputs(inputs)
-            console.log("inputs generated", inpObj)
-
-            inpObj.forEach((input,index) => {
-                input.cusTribute[0].value = tributes[index].name
-                input.cusTributeimg[0].value = tributes[index].image
-                input.cusTributenickname[0].value = tributes[index].name
-                input.cusTributeimgBW[0].value = true ? 'BW' : tributes[index].image
-                input.cusTributegender[0].value = tributes[index].gender
-            });
-        }
-        //Lain end
         function hgLoad(rolling=false) {
             const hgReapingSize = GM_getValue("reapingSize", 24);
             const optGreyDead = GM_getValue("options_greyDead", true);
