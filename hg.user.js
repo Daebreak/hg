@@ -7,6 +7,7 @@
 // @iconURL     https://github.com/zmnmxlntr/hg/raw/master/icon.png
 // @include     /^(https?://)?boards\.4chan(nel)?\.org/.*/(res|thread)/.*$/
 // @include     /^(https?://)?(www\.)?brantsteele\.net/hungergames/(edit|personal)\.php$/
+// @match       https://brantsteele.com/hungergames/classic/edit.php
 // @grant       GM_setValue
 // @grant       GM_getValue
 // ==/UserScript==
@@ -453,7 +454,7 @@
             hgNumberTributes();
 
             console.log(new Date().getTime() - start);
-         }
+        }
 
         function hgSave() {
             const start = new Date().getTime();
@@ -818,7 +819,7 @@
         function generateInputs(inputs) {
             let arrInputs = [];
             for (let i = 2; i < inputs.length - 8; i += 4) {
-                var newInput = {
+                let newInput = {
                     cusTribute: document.getElementsByName(`${inputs[i].name}`),
                     cusTributeimg: document.getElementsByName(`${inputs[i + 1].name}`),
                     cusTributenickname: document.getElementsByName(`${inputs[i + 2].name}`),
@@ -940,28 +941,58 @@
         hgLoad_div.append(hgCreateElement_Button("Load", "Load saved tributes", GM_getValue("options_testBuild", false) ? setTributes : hgLoad));
         hgLoad_div.append(hgCreateElement_Button("Rolling Load", "Load saved tributes over and over again until we're full up", function() { hgLoad(true); }));
         document.getElementsByClassName("personalHG")[0].prepend(hgLoad_div);
+    } else if(window.location.hostname === "brantsteele.com" || window.location.hostname === "https://brantsteele.com") {
+        let tables = document.getElementsByClassName('DivTable')
+
+        function generateDistrictsForm(tables) {
+            let districts = []
+            for (let i = 2; i < tables.length + 1; i++){
+                let newInput = {
+                    team: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[0],
+                    color: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[1],
+                    plurarl: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[2],
+                    reverse: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[3]
+                }
+                districts.push(newInput)
+            }
+            return districts
+        }
+
+        function generateTributesForm(tables) {
+            let districts = []
+            for (let i = 2; i < tables.length + 1; i++){
+                let newInput = {
+                    team: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[0],
+                    color: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[1],
+                    plurarl: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[2],
+                    reverse: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[3]
+                }
+                districts.push(newInput)
+            }
+            return districts
+        }
     }
 
-    function hgCreateElement_Div(className, style=null, innerHTML=null) {
-        const hgElement_div = document.createElement("div");
+ function hgCreateElement_Div(className, style=null, innerHTML=null) {
+    const hgElement_div = document.createElement("div");
 
-        hgElement_div.className = className;
-        if(style) hgElement_div.style = style; // ToDO: This is shit. Does style assignment append instead of overwrite? If so, we can lose the check.
-        if(innerHTML) hgElement_div.innerHTML = innerHTML; // ToDO: So is this. Are the checks even necessary?
+    hgElement_div.className = className;
+    if(style) hgElement_div.style = style; // ToDO: This is shit. Does style assignment append instead of overwrite? If so, we can lose the check.
+    if(innerHTML) hgElement_div.innerHTML = innerHTML; // ToDO: So is this. Are the checks even necessary?
 
-        return hgElement_div;
-    }
+    return hgElement_div;
+}
 
-    function hgCreateElement_Button(innerHTML, title, onclick, id=null, style=null) {
-        const hgElement_btn           = document.createElement("button");
+function hgCreateElement_Button(innerHTML, title, onclick, id=null, style=null) {
+    const hgElement_btn           = document.createElement("button");
 
-        hgElement_btn.type            = "button"; // ToDO: Necessary?
-        hgElement_btn.title           = title;
-        hgElement_btn.innerHTML       = innerHTML;
-        hgElement_btn.onclick         = onclick;
-        if(id) hgElement_btn.id       = id;
-        if(style) hgElement_btn.style = style;
+    hgElement_btn.type            = "button"; // ToDO: Necessary?
+    hgElement_btn.title           = title;
+    hgElement_btn.innerHTML       = innerHTML;
+    hgElement_btn.onclick         = onclick;
+    if(id) hgElement_btn.id       = id;
+    if(style) hgElement_btn.style = style;
 
-        return hgElement_btn;
-    }
+    return hgElement_btn;
+}
 })();
