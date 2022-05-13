@@ -943,10 +943,36 @@
         document.getElementsByClassName("personalHG")[0].prepend(hgLoad_div);
     } else if(window.location.hostname === "brantsteele.com" || window.location.hostname === "https://brantsteele.com") {
         let tables = document.getElementsByClassName('DivTable')
+        let length = tables.length
+        let districtForm = generateDistrictsForm(tables)
+        let tributesForm = generateTributesForm(tables)
+        const tribs = GM_getValue("tributes")
+        console.log(tribs)
+
+        function convertToObject () {
+            const noms = GM_getValue("nomsStr").split('|');
+            const gens = GM_getValue("gensStr").split('|');
+            const imgs = GM_getValue("imgsStr").split('|');
+
+            let i = 0
+            let size = noms.length
+            let tributes = []
+
+            while (i < size) {
+                let tribute = {
+                    name: noms[i],
+                    gender: gens[i].toString(),
+                    image: imgs[i]
+                }
+                i++
+                tributes.push(tribute)
+            }
+            return tributes
+        }
 
         function generateDistrictsForm(tables) {
             let districts = []
-            for (let i = 2; i < tables.length + 1; i++){
+            for (let i = 2; i < length + 1; i++){
                 let newInput = {
                     team: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[0],
                     color: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[1],
@@ -960,17 +986,53 @@
 
         function generateTributesForm(tables) {
             let districts = []
-            for (let i = 2; i < tables.length + 1; i++){
-                let newInput = {
-                    team: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[0],
-                    color: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[1],
-                    plurarl: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[2],
-                    reverse: tables[0].getElementsByClassName('DivRow')[i].getElementsByTagName('input')[3]
+
+            for (let i = 1; i < length; i++) {
+                let row = tables[i].getElementsByClassName('DivRow')
+                let rowSize = row.length
+                let district = []
+
+                for (let j = 1; j < rowSize; j+= 2) {
+                    let obj = {
+                        name: row[j].getElementsByTagName('input')[0],
+                        nickName: row[j].getElementsByTagName('input')[1],
+                        gender: row[j].getElementsByTagName('select')[0],
+                        image: row[j].getElementsByTagName('input')[2],
+                        imageBw: row[j + 1].getElementsByTagName('input')[0]
+                    }
+                    district.push(obj)
                 }
-                districts.push(newInput)
+                districts.push(district)
             }
             return districts
         }
+
+        function setTributes(tributes) {
+            let i = 0
+            let k = 0
+            let numTributes = tributes.length
+            while (i < length && k < numTributes) {
+                let rowSize = tributesForm[i].length
+                let j = 0
+
+                while (j < rowSize && k < numTributes) {
+                    tributesForm[i][j].name.value = tributes[k].name
+                    tributesForm[i][j].nickName.value = tributes[k].name
+                    tributesForm[i][j].gender.value = tributes[k].gender
+                    tributesForm[i][j].image.value = tributes[k].image
+                    tributesForm[i][j].imageBw.value = 'BW'
+                    k++
+                    j++
+                }
+                i++
+            }
+        }
+
+        let players = convertToObject()
+
+        const hgLoad_div = hgCreateElement_Div("hgLoad", "position:absolute;");
+        hgLoad_div.append(hgCreateElement_Button("Load", "Load saved tributes", () => setTributes(tribs)));
+        document.getElementsByClassName("MiddleBarContent")[0].prepend(hgLoad_div);
     }
 
  function hgCreateElement_Div(className, style=null, innerHTML=null) {
